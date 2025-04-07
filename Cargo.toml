@@ -1,0 +1,13 @@
+[package]
+name = "wd-discord-bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dotenv = "0.15.0"
+env = "1.0.1"
+io = "0.0.2"
+
+[[bin]]
+name = "wd-discord-bot"
+path = "src/main.rs"
