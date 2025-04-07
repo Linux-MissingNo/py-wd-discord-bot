@@ -2,11 +2,12 @@ use std::fs::File;
 use std::path::Path;
 use std::io::{self, Write};
 use std::process::Command;
+use std::fs::create_dir_all;
 
 const ENV_KEYS: [&str; 4] = ["TOKEN", "SHOT_ROLE", "SHOT_TIMEOUT_IN_HOURS", "GUILD_ID"];
 
 const MAIN_SCRIPT_PATH: &str = "scripts/main.py";
-const CONFIG_PATH: &str = "config/";
+const CONFIG_PATH: &str = "config";
 
 fn main() -> io::Result<()> {
     // check the working directory
@@ -27,19 +28,24 @@ fn main() -> io::Result<()> {
 
 // Create .env file
 fn create_env_file() -> io::Result<()> {
-    let path = format!("{}/.env", CONFIG_PATH); 
+    let path = format!("{}/.env", CONFIG_PATH);
 
+    // Ensure the 'config' directory exists
+    if !Path::new(CONFIG_PATH).exists() {
+        println!("'config' directory not found, creating it...");
+        create_dir_all(CONFIG_PATH)?; // This will create the 'config' directory if it doesn't exist
+    }
+
+    // Check if the .env file exists
     if !Path::new(&path).exists() {
         println!(".env not found, generating new .env...");
-        let mut writer = File::create(path)?;
+        let mut writer = File::create(&path)?;
 
         for key in ENV_KEYS.iter() {
             writeln!(writer, "{key}=null").expect("Failed to write to .env");
         }
 
-        panic!("
-            .env was created. Please fill out the values before running the program again. Exiting the program...
-        ");
+        panic!(".env was created. Please fill out the values before running the program again. Exiting the program...");
     }
     Ok(())
 }
