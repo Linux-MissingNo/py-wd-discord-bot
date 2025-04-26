@@ -10,40 +10,90 @@ class ReviveCommand(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="revive", description="revive a player")
+    @app_commands.command(name="revive", description="Revive a player")
     @app_commands.describe(user="The user you want to revive")
-    async def removeRole(self, interaction: discord.Interaction, user: discord.Member):
-        logger.info(f"{interaction.user.mention} want to revive {user.mention}")
+    async def revive_player(self, interaction: discord.Interaction, user: discord.Member):
+        """
+        Allows a user (medic) to revive another user (patient) if they have a medkit.
+        """
+        medic: discord.Member = interaction.user
+        patient: discord.Member = user
 
-        role_id = int(os.getenv("SHOT_ROLE"))
-        role = interaction.guild.get_role(role_id)
+        async def create_player(player_id: str):
+            """
+            Ensures the player exists in the database by calling the registration cog.
+            """
+            registration_cog = self.bot.get_cog('Registration')
+            if registration_cog:
+                await registration_cog.create_player_if_not_exists(self.bot.db_pool, player_id)
+            else:
+                logger.error("Registration cog is not loaded. Unable to create player.")
+                raise Exception("Registration cog not found.")
 
-        has_role = any(r.name == role.name for r in user.roles)
-        has_medkit = True  # TBD: Implement a logic that check for if the user have a medkit
+        # Ensure both players are registered
+        await create_player(str(medic.id))
+        await create_player(str(patient.id))
 
-        if not role:
+        logger.info(f"{medic.mention} wants to revive {patient.mention}")
+
+        shot_role_id = int(os.getenv("SHOT_ROLE"))
+        shot_role = interaction.guild.get_role(shot_role_id)
+
+        if not shot_role:
             await interaction.response.send_message("Shot Role not found.", ephemeral=True)
-            logger.error(f"Failed to find shot role, ensure that the SHOT role have been enabled and/or ID have been set in the .env")
-            logger.debug(f"The ID of the SHOT role was set to {role_id}")
+            logger.error("Shot role not found. Check SHOT_ROLE environment variable.")
             return
-        if not has_role:
-            await interaction.response.send_message(f"{user.mention} is not dead", ephemeral=True)
+
+        # Check if the patient has the shot role
+        has_shot_role = any(role.id == shot_role.id for role in patient.roles)
+        if not has_shot_role:
+            await interaction.response.send_message(f"{patient.mention} is not dead.", ephemeral=True)
             return
-        if not has_medkit:
-            await interaction.response.send_message(f"You don't have any medkit, lel", ephemeral=True)
-            return
-        else:
+
+        async with self.bot.db_pool.acquire() as conn:
             try:
-                await user.remove_roles(role)
-                await interaction.response.send_message(f"{user.mention} has been revived!")
+                # Check medic's medkit count
+                result = await conn.fetchrow("""
+                    SELECT medkit FROM players_table WHERE player_id = $1;
+                """, str(medic.id))
+
+                if not result:
+                    await interaction.response.send_message("You are not registered in the game.", ephemeral=True)
+                    logger.warning(f"Medic {medic.id} is not registered in the DB.")
+                    return
+
+                medkit_count = result["medkit"]
+                logger.info(f"{medic.mention} has {medkit_count} medkits.")
+
+                if medkit_count <= 0:
+                    await interaction.response.send_message(f"{medic.mention}, you don't have any medkits!", ephemeral=True)
+                    return
+
+                # Subtract medkit and update patient's status
+                await conn.execute("""
+                    UPDATE players_table
+                    SET medkit = GREATEST(medkit - 1, 0)
+                    WHERE player_id = $1;
+                """, str(medic.id))
+
+                # Remove shot role and timeout
+                await patient.remove_roles(shot_role)
+                await patient.edit(timed_out_until=None)
+
+                await interaction.response.send_message(
+                    f"{patient.mention} has been revived by {medic.mention}!"
+                )
+                logger.info(f"{medic.mention} successfully revived {patient.mention}.")
+
             except discord.Forbidden:
                 await interaction.response.send_message(
-                    "I do not have permission to remove that role. Please enable manage roles and/or move my role above the shot role"
+                    "Missing permissions to modify roles or timeouts. Please check role hierarchy and permissions.",
+                    ephemeral=True
                 )
-                logger.error(f"Failed to remove SHOT role from {user.mention}, Ensure that the bot's role have the manage role authority and is above the SHOT role")
+                logger.error(f"Permission error while reviving {patient.mention}.")
             except Exception as e:
-                await interaction.response.send_message(f"An error occured: {e}")
-
+                await interaction.response.send_message(f"An unexpected error occurred: {e}", ephemeral=True)
+                logger.exception(f"Unexpected error while reviving {patient.mention}: {e}")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ReviveCommand(bot))

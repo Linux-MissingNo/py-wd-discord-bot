@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands
+from dotenv import load_dotenv
+import os
 import asyncpg
 import logging
 
-
 logger = logging.getLogger("discord_bot")
+DEBUG = os.getenv("DEBUG") == "True"  # Set DEBUG to True if the environment variable is "True"
 
 class Registration(commands.Cog):
     def __init__(self, bot, db_pool):
@@ -35,19 +37,32 @@ class Registration(commands.Cog):
         result = await conn.fetchrow("SELECT player_id FROM players_table WHERE player_id = $1", player_id)
 
         if result is None:  # Player doesn't exist
-            # Insert player
+            # Set default values based on the DEBUG variable
+            if DEBUG:
+                guns = 127
+                vest = 127
+                medkit = 127
+                balance = 101010
+                logger.info(f"Setting default values for player {player_id} in DEBUG mode.")
+            else:
+                guns = 0
+                vest = 0
+                medkit = 0
+                balance = 50
+                logger.info(f"Setting default values for player {player_id} in normal mode.")
+
+            # Insert player with default values
             await conn.execute(
-                "INSERT INTO players_table (player_id, balance) VALUES ($1, $2)",
-                player_id, 50  # Default balance set to 50
+                "INSERT INTO players_table (player_id, guns, medkit, vest, balance) VALUES ($1, $2, $3, $4, $5)",
+                player_id, guns, medkit, vest, balance
             )
-            logger.info(f"Player {player_id} created in the database.")
+            logger.info(f"Player {player_id} created in the database with default values.")
         else:
             logger.info(f"Player {player_id} already exists in the database.")
 
 async def setup(bot):
     db_pool = bot.db_pool  # Use the db_pool from the bot instance
     await bot.add_cog(Registration(bot, db_pool))
-    
+
 # When calling this in another cog, use the below line
 # bot.load_extension('registration')
-

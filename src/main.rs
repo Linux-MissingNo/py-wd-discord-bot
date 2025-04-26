@@ -4,11 +4,12 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 
-const ENV_KEYS: [&str; 9] = [
+const ENV_KEYS: [&str; 10] = [
     "TOKEN",
     "SHOT_ROLE",
     "SHOT_TIMEOUT_IN_HOURS",
     "GUILD_ID",
+    "DEBUG",
     "DB_USER",
     "DB_PASSWORD",
     "DB_NAME",
@@ -51,6 +52,7 @@ fn create_env_file_if_missing() -> io::Result<()> {
                 "DB_NAME" => "your_db_name",
                 "DB_HOST" => "localhost",
                 "DB_PORT" => "5432",
+                "DEBUG" => "False",
                 _ => "null",
             };
             writeln!(writer, "{key}={default}")?;
