@@ -1,5 +1,5 @@
 -- Player Tables
-CREATE TABLE players_table (
+CREATE TABLE IF NOT EXISTS players_table (
     player_id VARCHAR(50) PRIMARY KEY,
     balance INTEGER DEFAULT 50 CHECK (balance >= 0),
     guns SMALLINT DEFAULT 0 CHECK (guns >= 0 AND guns <= 127),
@@ -10,7 +10,7 @@ CREATE TABLE players_table (
     last_dead DATE DEFAULT NULL
 );
 
-CREATE TABLE political_roles_table (
+CREATE TABLE IF NOT EXISTS political_roles_table (
     role_id SERIAL PRIMARY KEY,
     player_id VARCHAR(50),
     role_name VARCHAR(50) NOT NULL,
@@ -21,14 +21,14 @@ CREATE TABLE political_roles_table (
 );
 
 -- Company Tables
-CREATE TABLE companies_table (
+CREATE TABLE IF NOT EXISTS companies_table (
     company_id SERIAL PRIMARY KEY,
     company_name VARCHAR(50) UNIQUE NOT NULL,
     company_cash_reserve INTEGER CHECK (company_cash_reserve > 0),
     founding_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE shareholders_table (
+CREATE TABLE IF NOT EXISTS shareholders_table (
     company_id INTEGER NOT NULL,
     player_id VARCHAR(50) NOT NULL,
     shareholder_role VARCHAR(50) NOT NULL,
@@ -40,12 +40,12 @@ CREATE TABLE shareholders_table (
 );
 
 -- Building Tables
-CREATE TABLE buildings_table (
+CREATE TABLE IF NOT EXISTS buildings_table (
     building_id SERIAL PRIMARY KEY,
     building_cash_reserve INTEGER CHECK (building_cash_reserve > 0)
 );
 
-CREATE TABLE ownerships_table (
+CREATE TABLE IF NOT EXISTS ownerships_table (
     ownership_id SERIAL PRIMARY KEY,
     building_id INTEGER NOT NULL,
     owner_type TEXT NOT NULL CHECK (owner_type IN ('company', 'player')),
@@ -63,7 +63,7 @@ CREATE TABLE ownerships_table (
     )
 );
 
-CREATE TABLE building_banks_table (
+CREATE TABLE IF NOT EXISTS building_banks_table (
     bank_id INTEGER PRIMARY KEY,
     bank_name VARCHAR(50) UNIQUE NOT NULL,
     founding_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -72,7 +72,7 @@ CREATE TABLE building_banks_table (
         FOREIGN KEY (bank_id) REFERENCES buildings_table(building_id)
 );
 
-CREATE TABLE building_factories_table (
+CREATE TABLE IF NOT EXISTS building_factories_table (
     factory_id INTEGER PRIMARY KEY,
     factory_type VARCHAR(10) NOT NULL,
     factory_inventory SMALLINT DEFAULT 0 CHECK (factory_inventory >= 0),
@@ -80,7 +80,7 @@ CREATE TABLE building_factories_table (
         FOREIGN KEY (factory_id) REFERENCES buildings_table(building_id)
 );
 
-CREATE TABLE building_employment_table (
+CREATE TABLE IF NOT EXISTS building_employment_table (
     building_id INTEGER,
     player_id VARCHAR(50),
     wage INTEGER CHECK (wage >= 0),
@@ -90,7 +90,7 @@ CREATE TABLE building_employment_table (
 );
 
 -- Transfer Parties Table (polymorphic reference)
-CREATE TABLE transfer_parties_table (
+CREATE TABLE IF NOT EXISTS transfer_parties_table (
     party_id SERIAL PRIMARY KEY,
     party_type TEXT NOT NULL CHECK (party_type IN ('player', 'company', 'building')),
     player_id VARCHAR(50),
@@ -107,7 +107,7 @@ CREATE TABLE transfer_parties_table (
 );
 
 -- Transactions Table
-CREATE TABLE transactions_table (
+CREATE TABLE IF NOT EXISTS transactions_table (
     transaction_number SERIAL PRIMARY KEY,
     time_of_transaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     transfer_type VARCHAR(10),
