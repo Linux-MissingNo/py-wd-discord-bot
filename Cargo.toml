@@ -7,6 +7,8 @@ edition = "2024"
 dotenv = "0.15.0"
 env = "1.0.1"
 io = "0.0.2"
+sqlx = {version = "0.8", features = ["postgres", "runtime-tokio-rustls"]}
+tokio = {version = "1", features = ["full"]}
 
 [[bin]]
 name = "wd-discord-bot"
