@@ -52,16 +52,18 @@ CREATE TABLE IF NOT EXISTS ownerships_table (
     player_id VARCHAR(50),
     company_id INTEGER,
     ownership_date DATE NOT NULL,
-
-    CONSTRAINT fk_ownership_building_id FOREIGN KEY (building_id) REFERENCES buildings_table(building_id),
-    CONSTRAINT fk_ownership_player_id FOREIGN KEY (player_id) REFERENCES players_table(player_id),
-    CONSTRAINT fk_ownership_company_id FOREIGN KEY (company_id) REFERENCES companies_table(company_id),
-
+    CONSTRAINT fk_ownership_building_id FOREIGN KEY (building_id) REFERENCES buildings_table(building_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_ownership_player_id FOREIGN KEY (player_id) REFERENCES players_table(player_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_ownership_company_id FOREIGN KEY (company_id) REFERENCES companies_table(company_id)
+        ON DELETE CASCADE,
     CHECK (
         (owner_type = 'player' AND player_id IS NOT NULL AND company_id IS NULL) OR
         (owner_type = 'company' AND company_id IS NOT NULL AND player_id IS NULL)
     )
 );
+
 
 CREATE TABLE IF NOT EXISTS building_banks_table (
     bank_id INTEGER PRIMARY KEY,
@@ -78,6 +80,7 @@ CREATE TABLE IF NOT EXISTS building_factories_table (
     factory_inventory SMALLINT DEFAULT 0 CHECK (factory_inventory >= 0),
     CONSTRAINT fk_factory_building_id
         FOREIGN KEY (factory_id) REFERENCES buildings_table(building_id)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS building_employment_table (
@@ -85,8 +88,10 @@ CREATE TABLE IF NOT EXISTS building_employment_table (
     player_id VARCHAR(50),
     wage INTEGER CHECK (wage >= 0),
     CONSTRAINT pk_building_employment PRIMARY KEY (building_id, player_id),
-    CONSTRAINT fk_employment_building_id FOREIGN KEY (building_id) REFERENCES buildings_table(building_id),
+    CONSTRAINT fk_employment_building_id FOREIGN KEY (building_id) REFERENCES buildings_table(building_id)
+        ON DELETE CASCADE,
     CONSTRAINT fk_employment_player_id FOREIGN KEY (player_id) REFERENCES players_table(player_id)
+        ON DELETE CASCADE
 );
 
 -- Transfer Parties Table (polymorphic reference)
@@ -101,9 +106,12 @@ CREATE TABLE IF NOT EXISTS transfer_parties_table (
         (party_type = 'company' AND company_id IS NOT NULL AND player_id IS NULL AND building_id IS NULL) OR
         (party_type = 'building' AND building_id IS NOT NULL AND player_id IS NULL AND company_id IS NULL)
     ),
-    FOREIGN KEY (player_id) REFERENCES players_table(player_id),
-    FOREIGN KEY (company_id) REFERENCES companies_table(company_id),
+    FOREIGN KEY (player_id) REFERENCES players_table(player_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (company_id) REFERENCES companies_table(company_id)
+        ON DELETE CASCADE,
     FOREIGN KEY (building_id) REFERENCES buildings_table(building_id)
+        ON DELETE CASCADE
 );
 
 -- Transactions Table
@@ -115,6 +123,8 @@ CREATE TABLE IF NOT EXISTS transactions_table (
     recipient_party_id INTEGER NOT NULL,
     amount SMALLINT NOT NULL CHECK (amount > 0),
     memo VARCHAR(50) DEFAULT 'n/a',
-    FOREIGN KEY (sender_party_id) REFERENCES transfer_parties_table(party_id),
+    FOREIGN KEY (sender_party_id) REFERENCES transfer_parties_table(party_id)
+        ON DELETE CASCADE,
     FOREIGN KEY (recipient_party_id) REFERENCES transfer_parties_table(party_id)
+        ON DELETE CASCADE
 );
